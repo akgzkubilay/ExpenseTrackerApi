@@ -53,6 +53,20 @@ app.MapGet("/api/expenses", async () =>
     
     return Results.Ok(expenses);
 });
+//harcamları silme (DELETE)
+app.MapDelete("/api/expenses/{id}", async (int id) =>
+{
+    using var connection = new SqlConnection(connectionString); 
+    //dapper ile silme işlemi
+    var sql = "DELETE FROM Expenses where Id = @Id";
+
+    var affectedRows = await connection.ExecuteAsync(sql, new { Id = id });
+    if (affectedRows > 0)
+        return Results.NoContent(); // Silme başarılı, içerik yok
+    else
+        return Results.NotFound(); // Silinecek kayıt bulunamadı
+
+});
 
 // --- MOTORU ÇALIŞTIR ---
 app.Run();

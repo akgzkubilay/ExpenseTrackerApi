@@ -36,6 +36,7 @@
                     <th>Kategori</th>
                     <th>Açıklama</th>
                     <th>Tutar</th>
+                    <th>İşlem</th>
                 </tr>
             </thead>
             <tbody id="tableBody">
@@ -67,6 +68,9 @@
                             <td>${e.category}</td>
                             <td>${e.description || "-"}</td>
                             <td><strong>${e.amount} ₺</strong></td>
+                            <td>
+                            <button onclick="deleteExpense(${e.id})" style="background-color: #dc3545; padding: 5px 10px; font-size: 12px;">Sil</button>
+                            </td>
                         </tr>
                     `;
                 });
@@ -105,6 +109,21 @@
             
             loadExpenses();
         }
+        // 3. DELETE İsteği: Harcamayı sil
+        async function deleteExpense(id) {
+            const onay = confirm("Bu harcamayı silmek istediğinize emin misiniz?");
+            if (!onay) return;
+
+            try {
+            await fetch(`${API_URL}/${id}`, {
+                method: "DELETE"
+            });
+            loadExpenses(); 
+            } catch (error) {
+            console.error("Silme işlemi başarısız:", error);
+            }
+        }
+
     </script>
 </body>
 </html>
