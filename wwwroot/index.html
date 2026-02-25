@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kişisel Harcama Takip</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; padding: 20px; color: #333; }
+        .container { max-width: 700px; background: white; margin: auto; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h2 { border-bottom: 2px solid #0078D7; padding-bottom: 5px; color: #0078D7; }
+        .form-group { display: flex; gap: 10px; margin-bottom: 15px; }
+        input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 10px 20px; background-color: #0078D7; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #005a9e; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f8f9fa; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>💸 Yeni Harcama Ekle</h2>
+        <div class="form-group">
+            <input type="number" id="amount" placeholder="Tutar (Örn: 150.50)">
+            <input type="text" id="category" placeholder="Kategori (Örn: Gıda)">
+            <input type="text" id="description" placeholder="Açıklama (İsteğe bağlı)">
+            <button onclick="addExpense()">Kaydet</button>
+        </div>
+
+        <h2>📋 Tüm Harcamalar</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Tarih</th>
+                    <th>Kategori</th>
+                    <th>Açıklama</th>
+                    <th>Tutar</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                </tbody>
+        </table>
+    </div>
+
+    <script>
+        // KENDİ C# API ADRESİNİ VE PORTUNU BURAYA YAZ:
+        const API_URL = "http://localhost:5072/api/expenses";
+
+        // Sayfa açılır açılmaz verileri getir
+        window.onload = loadExpenses;
+
+        // 1. GET İsteği: Veritabanından verileri çek ve tabloya bas
+        async function loadExpenses() {
+            try {
+                const response = await fetch(API_URL);
+                const expenses = await response.json();
+                
+                const tbody = document.getElementById("tableBody");
+                tbody.innerHTML = ""; 
+                
+                expenses.forEach(e => {
+                    const date = new Date(e.date).toLocaleDateString("tr-TR");
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${date}</td>
+                            <td>${e.category}</td>
+                            <td>${e.description || "-"}</td>
+                            <td><strong>${e.amount} ₺</strong></td>
+                        </tr>
+                    `;
+                });
+            } catch (error) {
+                console.error("Veri çekilemedi. API çalışıyor mu?", error);
+            }
+        }
+
+        // 2. POST İsteği: Yeni harcamayı API'ye gönder
+        async function addExpense() {
+            const amount = document.getElementById("amount").value;
+            const category = document.getElementById("category").value;
+            const description = document.getElementById("description").value;
+
+            if (!amount || !category) {
+                alert("Lütfen Tutar ve Kategori alanlarını doldurun!");
+                return;
+            }
+
+            const expenseData = {
+                amount: parseFloat(amount),
+                category: category,
+                description: description
+            };
+
+            await fetch(API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(expenseData)
+            });
+
+            // Kutuları temizle ve güncel tabloyu yeniden yükle
+            document.getElementById("amount").value = "";
+            document.getElementById("category").value = "";
+            document.getElementById("description").value = "";
+            
+            loadExpenses();
+        }
+    </script>
+</body>
+</html>
