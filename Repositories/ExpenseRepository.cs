@@ -1,19 +1,19 @@
 using Dapper;
 using ExpenseTrackerApi.Repositories;
-using ExprenseTrackerApi.Models;
+using ExpenseTrackerApi.Models;
 using Microsoft.Data.SqlClient;
 
 
-namespace ExprenseTrackerApi.Repositories
+namespace ExpenseTrackerApi.Repositories
 {
-    public class ExpenseRepositories : IExpenseRepository
+    public class ExpenseRepository: IExpenseRepository
     {
         private readonly string  _connectionString;
-        public ExpenseRepositories(string connectionString)
+        public ExpenseRepository(string connectionString)
         {
             _connectionString = connectionString;
         }
-        public ExpenseRepositories(IConfiguration configuration)
+        public ExpenseRepository(IConfiguration configuration)
         {
             _connectionString = configuration.GetConnectionString("DefaultConnection")!;
         }

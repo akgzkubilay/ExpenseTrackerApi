@@ -1,6 +1,6 @@
 namespace ExpenseTrackerApi.Repositories;
 
-using ExprenseTrackerApi.Models;
+using ExpenseTrackerApi.Models;
 
 public interface IExpenseRepository
 {

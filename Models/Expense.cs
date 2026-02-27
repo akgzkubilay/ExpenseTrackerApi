@@ -1,4 +1,4 @@
-namespace ExprenseTrackerApi.Models
+namespace ExpenseTrackerApi.Models
 {
    public class Expense
     {
