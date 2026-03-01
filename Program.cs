@@ -1,72 +1,57 @@
-using Microsoft.Data.SqlClient;
-using Dapper;
-using ExprenseTrackerApi.Models;
+using ExpenseTrackerApi.Models;
+using ExpenseTrackerApi.Repositories; // Veri katmanımızı tanıttık
+using ExpenseTrackerApi.Services;     // İş katmanımızı tanıttık
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. AŞAMA: MALZEMELERİ EKLİYORUZ (Build'den ÖNCE olmalı!)
-// CORS yetkisini sisteme tanıtıyoruz
+// 1. CORS Ayarları
 builder.Services.AddCors(options => {
     options.AddDefaultPolicy(policy => {
         policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
     });
 });
 
-// --- KEKİ FIRINA VERİYORUZ (Artık builder.Services kullanılamaz) ---
+// 2. DEPENDENCY INJECTION (BAĞIMLILIK ENJEKSİYONU) KABLO BAĞLANTILARI
+// Sisteme diyoruz ki: "Biri senden interface isterse, ona asıl işi yapan class'ı ver."
+builder.Services.AddScoped<IExpenseRepository, ExpenseRepository>();
+builder.Services.AddScoped<IExpenseService, ExpenseService>();
+
 var app = builder.Build();
 
-// 2. AŞAMA: ARA KATMANLARI (MIDDLEWARE) EKLİYORUZ
-app.UseCors(); // CORS'u aktif et
-app.UseDefaultFiles(); // index.html'i varsayılan sayfa yap
-app.UseStaticFiles();  // wwwroot klasörünü dışarıya aç
+// 3. ARA KATMANLAR (MIDDLEWARE)
+app.UseCors();
+app.UseDefaultFiles();
+app.UseStaticFiles();
 
-// appsettings.json içindeki bağlantı dizesini alıyoruz
-string connectionString = builder.Configuration.GetConnectionString("DefaultConnection")!;
+// --- 4. TEMİZLENMİŞ ENDPOINT'LER (API YOLLARI) ---
 
-// --- 3. AŞAMA: ENDPOINT'LER (API YOLLARI) ---
-
-// Yeni Harcama Ekleme (POST)
-app.MapPost("/api/expenses", async (Expense expense) =>
+// Harcama Ekleme (POST) - Artık SQL yok, sadece Service ile konuşuyor!
+app.MapPost("/api/expenses", async (Expense expense, IExpenseService service) =>
 {
-    // Tarih gönderilmemişse bugünün tarihini kullan
-    if (expense.Date == default)
-        expense.Date = DateTime.Now;
-
-    using var connection = new SqlConnection(connectionString);
-    var sql = @"
-        INSERT INTO Expenses (Amount, Category, Description, Date) 
-        VALUES (@Amount, @Category, @Description, @Date);
-        SELECT CAST(SCOPE_IDENTITY() as int);"; 
+    var result = await service.AddExpenseAsync(expense);
     
-    var id = await connection.QuerySingleAsync<int>(sql, expense);
-    expense.Id = id;
-    
-    return Results.Created($"/api/expenses/{id}", expense);
+    if (result == null) 
+        return Results.BadRequest("Hata: Tutar 0'dan büyük olmalı ve kategori boş olamaz.");
+        
+    return Results.Created($"/api/expenses/{result.Id}", result);
 });
 
-// Tüm Harcamaları Listeleme (GET)
-app.MapGet("/api/expenses", async () =>
+// Harcamaları Listeleme (GET)
+app.MapGet("/api/expenses", async (IExpenseService service) =>
 {
-    using var connection = new SqlConnection(connectionString);
-    var sql = "SELECT * FROM Expenses ORDER BY Date DESC";
-    var expenses = await connection.QueryAsync<Expense>(sql);
-    
+    var expenses = await service.GetAllExpensesAsync();
     return Results.Ok(expenses);
 });
-//harcamları silme (DELETE)
-app.MapDelete("/api/expenses/{id}", async (int id) =>
+
+// Harcama Silme (DELETE)
+app.MapDelete("/api/expenses/{id}", async (int id, IExpenseService service) =>
 {
-    using var connection = new SqlConnection(connectionString); 
-    //dapper ile silme işlemi
-    var sql = "DELETE FROM Expenses where Id = @Id";
-
-    var affectedRows = await connection.ExecuteAsync(sql, new { Id = id });
-    if (affectedRows > 0)
-        return Results.NoContent(); // Silme başarılı, içerik yok
-    else
-        return Results.NotFound(); // Silinecek kayıt bulunamadı
-
+    var isDeleted = await service.DeleteExpenseAsync(id);
+    
+    if (isDeleted == null) 
+        return Results.NotFound("Silinecek harcama bulunamadı.");
+        
+    return Results.Ok("Harcama başarıyla silindi.");
 });
 
-// --- MOTORU ÇALIŞTIR ---
 app.Run();
