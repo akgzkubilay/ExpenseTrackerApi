@@ -20,9 +20,12 @@ namespace ExpenseTrackerApi.Repositories
 
         public async Task<int> AddAsync(Expense expense)
         {
+            var sql = @"INSERT INTO Expenses (Description, Amount, Category, Date) 
+                VALUES (@Description, @Amount, @Category, @Date);
+                SELECT CAST(SCOPE_IDENTITY() AS INT)";
+
             using var connection = new SqlConnection(_connectionString);
-            var sql = "INSERT INTO Expenses (Description, Amount, Date) VALUES (@Description, @Amount, @Date); SELECT CAST(SCOPE_IDENTITY() as int)";
-            return  await connection.ExecuteScalarAsync<int>(sql, expense);
+            return await connection.ExecuteScalarAsync<int>(sql, expense);
         }
 
 
@@ -40,6 +43,14 @@ namespace ExpenseTrackerApi.Repositories
             var sql = "SELECT * FROM Expenses ORDER BY Date DESC";
             return await connection.QueryAsync<Expense>(sql);
             
+        }
+
+        public async Task<bool> UpdateAsync(int id, Expense expense)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            var sql = "UPDATE Expenses SET Description = @Description, Amount = @Amount, Date = @Date WHERE Id = @Id";
+            var affectedRows = await connection.ExecuteAsync(sql, new { Id = id, expense.Description, expense.Amount, expense.Date });
+            return affectedRows > 0;
         }
     }
 }
